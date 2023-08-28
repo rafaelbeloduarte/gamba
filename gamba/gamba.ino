@@ -9,13 +9,12 @@ int gas_sensorValue = 0;
 // Data Logger shield
 
 #include<Wire.h>
-// #include "RTClib.h" // Must download the library from manage library &gt; type RTCLib by Adafruit
+#include "RTClib.h" // Must download the library from manage library &gt; type RTCLib by Adafruit
 #include<SPI.h>
 #include<SD.h>
 #include <LiquidCrystal.h>
 
-//RTC_DS1307 RTC;
-//DateTime now;
+RTC_DS1307 rtc;
 
 int chipSelect = 10;
 
@@ -41,7 +40,7 @@ unsigned long currentMillisSD;
 const unsigned long periodSD = 5000;
 unsigned long startMillisLCD;
 unsigned long currentMillisLCD;
-const unsigned long periodLCD = 1000;
+const unsigned long periodLCD = 2000;
 float t_min = 0;
 
 LiquidCrystal lcd( pin_RS,  pin_EN,  pin_d4,  pin_d5,  pin_d6,  pin_d7);
@@ -63,27 +62,6 @@ double readCelsius(uint8_t cs) {
   v >>= 3;
 
   return v * 0.25;
-}
-
-void printLabels() {
-  lcd.clear();
-  lcd.setCursor(3, 0);
-  lcd.print("m");
-  lcd.setCursor(7, 0);
-  lcd.print((char) 223);
-  lcd.print("C");
-  lcd.setCursor(10, 0);
-  lcd.print("G:");
-  lcd.setCursor(0, 1);
-  lcd.print("F:");
-  lcd.setCursor(6, 1);
-  lcd.print((char) 223);
-  lcd.print("C");
-  lcd.setCursor(9, 1);
-  lcd.print("R:");
-  lcd.setCursor(14, 1);
-  lcd.print((char) 223);
-  lcd.print("C");
 }
 
 void printMenu(int option) {
@@ -118,6 +96,9 @@ void dumpToSerial() {
   Serial.print("Enviando dados, aguarde...");
   Serial.println();
   Serial.println();
+
+  lcd.clear();
+  lcd.print("Enviando...");
 
   delay(5000);
 
@@ -178,7 +159,7 @@ void deleteData() {
       break;
     }
   }
-  printLabels();
+  
 }
 
 void setup()
@@ -209,10 +190,6 @@ void setup()
   lcd.print("coleta de dados");
   delay(1000);
 
-  // If you want to start from an empty file,
-  // uncomment the next line:
-  // SD.remove(filename);
-
   // try to open the file for writing
   mySensorData = SD.open(filename, FILE_WRITE);
   if (!mySensorData) {
@@ -238,15 +215,29 @@ void setup()
   }
 
   // add some new lines to start
-  mySensorData.println("millis,t_min,Tr,Tf,gas");
+  mySensorData.println("data,horario,millis,t_min,Tr,Tf,gas");
   mySensorData.close();
 
   startMillisSD = millis();
-  //  RTC.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  //  if(! RTC.isrunning())
-  //  {
-  //    // Serial.println("RTC is not running !");
-  //  }
+
+  if (! rtc.begin()) {
+    lcd.clear();
+    lcd.print("RTC not found");
+    while (1) delay(100);
+  }
+
+  if (! rtc.isrunning()) {
+    lcd.clear();
+    lcd.print("RTC NOT running");
+    lcd.setCursor(0,1);
+    lcd.print("setting time");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }
 
 #if WAIT_TO_START
   lcd.setCursor(0, 0);
@@ -256,14 +247,14 @@ void setup()
   while (analogRead(0) > 800);
 #endif //WAIT_TO_START
 
-  printLabels();
+  
 
 }
 
 void loop()
 
 {
-  delay(100);
+  delay(10);
 
   // to detect key pressed
   int x;
@@ -289,11 +280,11 @@ void loop()
         lcd.setCursor(0, 1);
         lcd.print("p/ porta serial");
         delay(5000);
-        printLabels();
+        
         break;
       }
       else if (x < 600) {
-        printLabels();
+        
         delay(100);
         break;
       }
@@ -322,10 +313,10 @@ void loop()
 
 
   if (currentMillisLCD - startMillisLCD >= periodLCD)
-  {
+  { 
     // read sensors
     t_min = float(millis()) / (60000);
-    lcd.setCursor(0, 0);
+    lcd.clear();
     lcd.print(t_min, 0);
     // Serial.println(t_min);
     // Serial.print("millis = ");
@@ -333,13 +324,31 @@ void loop()
     // Serial.print("   ");
     delay(5);        // delay in between reads for stability
 
+    
+    DateTime now = rtc.now();
+    lcd.setCursor(0,1);
+    lcd.print(now.hour(),DEC);
+    if (now.minute() < 10){
+      lcd.print("0");
+      lcd.print(now.minute(),DEC);
+      }
+    else {
+      lcd.print(now.minute(),DEC);
+      }
+
+    lcd.setCursor(13,0);
+    lcd.print("v_M");
+
+    lcd.setCursor(13,1);
+    lcd.print("v_D");
+
     Ta = readCelsius(pin_Ta);
     // Serial.print("Ta = ");
     // Serial.print(Ta);
     // Serial.print("   ");
-    lcd.setCursor(5, 0);
-    lcd.print(" ");
-    lcd.setCursor(5, 0);
+    lcd.setCursor(10, 0);
+    lcd.print("  ");
+    lcd.setCursor(10, 0);
     lcd.print(round(Ta));
     delay(5);        // delay in between reads for stability
 
@@ -347,9 +356,9 @@ void loop()
     // Serial.print("Tr = ");
     // Serial.print(Tr);
     // Serial.print("   ");
-    lcd.setCursor(11, 1);
+    lcd.setCursor(9, 1);
     lcd.print("   ");
-    lcd.setCursor(11, 1);
+    lcd.setCursor(9, 1);
     lcd.print(round(Tr));
     delay(5);        // delay in between reads for stability
 
@@ -357,22 +366,23 @@ void loop()
     // Serial.print("Tf = ");
     // Serial.print(Tf);
     // Serial.print("   ");
-    lcd.setCursor(2, 1);
+    lcd.setCursor(5, 1);
     lcd.print("   ");
-    lcd.setCursor(2, 1);
+    lcd.setCursor(5, 1);
     lcd.print(round(Tf));
     delay(5);        // delay in between reads for stability
 
     gas_sensorValue = analogRead(A1); // MQ2_sensor
     //    // Serial.print(gas_sensorValue);
     //    // Serial.print(" ");
-    lcd.setCursor(12, 0);
+    lcd.setCursor(5, 0);
     lcd.print("    ");
-    lcd.setCursor(12, 0);
+    lcd.setCursor(5, 0);
     lcd.print(gas_sensorValue);
     // Serial.print("gas = ");
     // Serial.println(gas_sensorValue);
     delay(5);        // delay in between reads for stability
+
     startMillisLCD = currentMillisLCD ;
   }
 
@@ -383,19 +393,19 @@ void loop()
     mySensorData = SD.open(filename, FILE_WRITE);
     if (mySensorData)
     {
-      //DateTime now = RTC.now();
-      //mySensorData.print(now.year(),DEC);
-      //mySensorData.print("/");
-      //mySensorData.print(now.month(),DEC);
-      //mySensorData.print("/");
-      //mySensorData.print(now.day(),DEC);
-      //mySensorData.print(" ");
-      //mySensorData.print(now.hour(),DEC);
-      //mySensorData.print(":");
-      //mySensorData.print(now.minute(),DEC);
-      //mySensorData.print(":");
-      //mySensorData.print(now.second(),DEC);
-      //mySensorData.print(",");
+      DateTime now = rtc.now();
+      mySensorData.print(now.year(),DEC);
+      mySensorData.print("/");
+      mySensorData.print(now.month(),DEC);
+      mySensorData.print("/");
+      mySensorData.print(now.day(),DEC);
+      mySensorData.print(",");
+      mySensorData.print(now.hour(),DEC);
+      mySensorData.print(":");
+      mySensorData.print(now.minute(),DEC);
+      mySensorData.print(":");
+      mySensorData.print(now.second(),DEC);
+      mySensorData.print(",");
       mySensorData.print(currentMillisSD);
       mySensorData.print(",");
 
@@ -420,7 +430,7 @@ void loop()
       lcd.setCursor(0, 1);
       lcd.print(filename);
       delay(1000);
-      printLabels();
+      
     }
   }
 

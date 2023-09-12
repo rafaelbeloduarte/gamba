@@ -4,6 +4,10 @@ float Tr = 0;
 float Tf = 0;
 float Ta = 0;
 int gas_sensorValue = 0;
+float CO2_molar_flow = 0; //mmol/min
+float CH4_molar_flow = 0; //mmol/min
+// MFC calibrated from 0 to 1000 cm³/min at 70 oF and 14.8 psi
+// outputs a 0 to 5V signal linear to this scale 
 
 
 // Data Logger shield
@@ -215,7 +219,7 @@ void setup()
   }
 
   // add some new lines to start
-  mySensorData.println("data,horario,millis,t_min,Tr,Tf,gas");
+  mySensorData.println("data,horario,millis,t_min,Tr,Tf,Ta,CO2_micromol_per_s,gas");
   mySensorData.close();
 
   startMillisSD = millis();
@@ -339,8 +343,14 @@ void loop()
     lcd.setCursor(13,0);
     lcd.print("v_M");
 
+    CO2_molar_flow = 0;
+    for (int i = 0; i<50; i++){
+      CO2_molar_flow = analogRead(A2) + CO2_molar_flow;
+      delay(1);
+      }
+    CO2_molar_flow = 0.6433*CO2_molar_flow/50;
     lcd.setCursor(13,1);
-    lcd.print("v_D");
+    lcd.print(round(CO2_molar_flow));
 
     Ta = readCelsius(pin_Ta);
     // Serial.print("Ta = ");
@@ -416,6 +426,12 @@ void loop()
       mySensorData.print(",");
 
       mySensorData.print(Tf);
+      mySensorData.print(",");
+
+      mySensorData.print(Ta);
+      mySensorData.print(",");
+
+      mySensorData.print(CO2_molar_flow);
       mySensorData.print(",");
 
       mySensorData.println(gas_sensorValue);

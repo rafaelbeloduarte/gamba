@@ -4,8 +4,9 @@ float Tr = 0;
 float Tf = 0;
 float Ta = 0;
 int gas_sensorValue = 0;
-float CO2_molar_flow = 0; //mmol/min
-float CH4_molar_flow = 0; //mmol/min
+float CO2_molar_flow = 0;
+float CH4_molar_flow = 0;
+int n_flow_readings = 100; // to take average flow readings from n_flow_readings
 // MFC calibrated from 0 to 1000 cm³/min at 70 oF and 14.8 psi
 // outputs a 0 to 5V signal linear to this scale 
 
@@ -94,10 +95,10 @@ void printMenu(int option) {
 }
 
 void dumpToSerial() {
-  Serial.begin(115200);
+  Serial.begin(230400);
   Serial.println();
   Serial.println();
-  Serial.print("Enviando dados, aguarde...");
+  Serial.print("Enviando dados...");
   Serial.println();
   Serial.println();
 
@@ -114,13 +115,13 @@ void dumpToSerial() {
   if (dataFile) {
     while (dataFile.available()) {
       Serial.write(dataFile.read());
-      delay(1);
+      //delay(1);
     }
     dataFile.close();
   }
   // if the file isn't open, pop up an error:
   else {
-    Serial.println("error opening file");
+    Serial.println("erro ao abrir");
   }
   Serial.println();
   Serial.println();
@@ -140,7 +141,7 @@ void deleteData() {
       lcd.clear();
       lcd.print("Pressione RST");
       lcd.setCursor(0, 1);
-      lcd.print("para cancelar");
+      lcd.print("p/ cancelar");
       delay(2000);
       lcd.clear();
       lcd.print("Apagando em...");
@@ -156,6 +157,7 @@ void deleteData() {
       lcd.setCursor(0, 1);
       lcd.print("apagado");
       delay(3000);
+      lcd.clear();
       break;
     }
     else if (x < 600) {
@@ -188,10 +190,10 @@ void setup()
   // for LCD
   lcd.begin(16, 2);
 
-  lcd.setCursor(3, 0);
-  lcd.print("Sistema de");
-  lcd.setCursor(0, 1);
-  lcd.print("coleta de dados");
+  //lcd.setCursor(3, 0);
+  //lcd.print("Sistema de");
+  //lcd.setCursor(0, 1);
+  //lcd.print("coleta de dados");
   delay(1000);
 
   // try to open the file for writing
@@ -199,7 +201,7 @@ void setup()
   if (!mySensorData) {
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("erro ao abrir ");
+    lcd.print("erro ao abrir");
     delay(5);
     // Serial.print("error opening ");
     // Serial.println(filename);
@@ -216,10 +218,11 @@ void setup()
     lcd.setCursor(0, 1);
     lcd.print("aberto");
     delay(2000);
+    lcd.clear();
   }
 
   // add some new lines to start
-  mySensorData.println("data,horario,millis,t_min,Tr,Tf,Ta,CO2_micromol_per_s,gas");
+  mySensorData.println("date,time,millis,t_min,Tr,Tf,Ta,CO2_µmol_per_s,CH4_µmol_per_s,gas");
   mySensorData.close();
 
   startMillisSD = millis();
@@ -284,12 +287,14 @@ void loop()
         lcd.setCursor(0, 1);
         lcd.print("p/ porta serial");
         delay(5000);
+        lcd.clear();
         
         break;
       }
       else if (x < 600) {
         
         delay(100);
+        lcd.clear();
         break;
       }
     }
@@ -320,7 +325,10 @@ void loop()
   { 
     // read sensors
     t_min = float(millis()) / (60000);
-    lcd.clear();
+    //lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("    ");
+    lcd.setCursor(0,0);
     lcd.print(t_min, 0);
     // Serial.println(t_min);
     // Serial.print("millis = ");
@@ -331,6 +339,8 @@ void loop()
     
     DateTime now = rtc.now();
     lcd.setCursor(0,1);
+    lcd.print("    ");
+    lcd.setCursor(0,1);
     lcd.print(now.hour(),DEC);
     if (now.minute() < 10){
       lcd.print("0");
@@ -340,17 +350,24 @@ void loop()
       lcd.print(now.minute(),DEC);
       }
 
-    lcd.setCursor(13,0);
-    lcd.print("v_M");
-
     CO2_molar_flow = 0;
-    for (int i = 0; i<50; i++){
+    CH4_molar_flow = 0;
+    for (int i = 0; i<n_flow_readings; i++){
       CO2_molar_flow = analogRead(A2) + CO2_molar_flow;
       delay(1);
+      CH4_molar_flow = analogRead(A3) + CH4_molar_flow;
+      delay(1);
       }
-    CO2_molar_flow = 0.6433*CO2_molar_flow/50;
+    CO2_molar_flow = 0.64338*CO2_molar_flow/n_flow_readings; // µmol/s
+    CH4_molar_flow = 0.64338*CH4_molar_flow/n_flow_readings; // µmol/s
+    lcd.setCursor(13,1);
+    lcd.print("   ");
     lcd.setCursor(13,1);
     lcd.print(round(CO2_molar_flow));
+    lcd.setCursor(13,0);
+    lcd.print("    ");
+    lcd.setCursor(13,0);
+    lcd.print(round(CH4_molar_flow));
 
     Ta = readCelsius(pin_Ta);
     // Serial.print("Ta = ");
@@ -434,6 +451,9 @@ void loop()
       mySensorData.print(CO2_molar_flow);
       mySensorData.print(",");
 
+      mySensorData.print(CH4_molar_flow);
+      mySensorData.print(",");
+
       mySensorData.println(gas_sensorValue);
 
       mySensorData.close();
@@ -442,7 +462,7 @@ void loop()
     }
     else {
       lcd.clear();
-      lcd.print("erro ao abrir ");
+      lcd.print("erro ao abrir");
       lcd.setCursor(0, 1);
       lcd.print(filename);
       delay(1000);

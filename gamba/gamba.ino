@@ -379,7 +379,7 @@ void loop()
     lcd.print(round(Ta));
     delay(5);        // delay in between reads for stability
 
-    Tr = readCelsius(pin_Tr);
+    Tr = 0.999*readCelsius(pin_Tr); // calibração: Treal = 0.9990*Tmedida; R2 = 0.9998; calibração em H2O a 0 e 100 C; data: 10/11/2023
     // Serial.print("Tr = ");
     // Serial.print(Tr);
     // Serial.print("   ");
@@ -389,7 +389,7 @@ void loop()
     lcd.print(round(Tr));
     delay(5);        // delay in between reads for stability
 
-    Tf = readCelsius(pin_Tf);
+    Tf = 0.9938*readCelsius(pin_Tf); // calibração: Treal = 0.9938*Tmedida; R2 = 0.9998; calibração em H2O a 0 e 100 C e KCl líq a 770ºC; data: 09/11/2023
     // Serial.print("Tf = ");
     // Serial.print(Tf);
     // Serial.print("   ");

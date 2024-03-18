@@ -4,8 +4,8 @@ float Tr = 0;
 float Tf = 0;
 float Ta = 0;
 int gas_sensorValue = 0;
-float CO2_molar_flow = 0;
-float CH4_molar_flow = 0;
+float CO2_signal = 0;
+float CH4_signal = 0;
 int n_flow_readings = 100; // to take average flow readings from n_flow_readings
 // MFC calibrated from 0 to 1000 cm³/min at 70 oF and 14.8 psi
 // outputs a 0 to 5V signal linear to this scale 
@@ -222,7 +222,7 @@ void setup()
   }
 
   // add some new lines to start
-  mySensorData.println("date,time,millis,t_min,Tr,Tf,Ta,CO2_µmol_per_s,CH4_µmol_per_s,gas");
+  mySensorData.println("date,time,millis,t_min,Tr,Tf,Ta,CO2_signal,CH4_signal,gas");
   mySensorData.close();
 
   startMillisSD = millis();
@@ -245,7 +245,7 @@ void setup()
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
-
+// rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 #if WAIT_TO_START
   lcd.setCursor(0, 0);
   lcd.print("Aperte qualquer");
@@ -350,24 +350,24 @@ void loop()
       lcd.print(now.minute(),DEC);
       }
 
-    CO2_molar_flow = 0;
-    CH4_molar_flow = 0;
+    CO2_signal = 0;
+    CH4_signal = 0;
     for (int i = 0; i<n_flow_readings; i++){
-      CO2_molar_flow = analogRead(A2) + CO2_molar_flow;
+      CO2_signal = analogRead(A2) + CO2_signal;
       delay(1);
-      CH4_molar_flow = analogRead(A3) + CH4_molar_flow;
+      CH4_signal = analogRead(A3) + CH4_signal;
       delay(1);
       }
-    CO2_molar_flow = 0.64338*CO2_molar_flow/n_flow_readings; // µmol/s
-    CH4_molar_flow = 0.64338*CH4_molar_flow/n_flow_readings; // µmol/s
+    CO2_signal = CO2_signal/n_flow_readings;
+    CH4_signal = CH4_signal/n_flow_readings;
     lcd.setCursor(13,1);
     lcd.print("   ");
     lcd.setCursor(13,1);
-    lcd.print(round(CO2_molar_flow));
+    lcd.print(round(1.0302*CO2_signal-46.57));
     lcd.setCursor(13,0);
     lcd.print("    ");
     lcd.setCursor(13,0);
-    lcd.print(round(CH4_molar_flow));
+    lcd.print(round(1.0974*CH4_signal));
 
     Ta = readCelsius(pin_Ta);
     // Serial.print("Ta = ");
@@ -448,10 +448,10 @@ void loop()
       mySensorData.print(Ta);
       mySensorData.print(",");
 
-      mySensorData.print(CO2_molar_flow);
+      mySensorData.print(CO2_signal);
       mySensorData.print(",");
 
-      mySensorData.print(CH4_molar_flow);
+      mySensorData.print(CH4_signal);
       mySensorData.print(",");
 
       mySensorData.println(gas_sensorValue);

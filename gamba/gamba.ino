@@ -46,7 +46,7 @@ const unsigned long periodSD = 5000;
 unsigned long startMillisLCD;
 unsigned long currentMillisLCD;
 const unsigned long periodLCD = 2000;
-float t_min = 0;
+float t_h = 0;
 
 LiquidCrystal lcd( pin_RS,  pin_EN,  pin_d4,  pin_d5,  pin_d6,  pin_d7);
 
@@ -222,7 +222,7 @@ void setup()
   }
 
   // add some new lines to start
-  mySensorData.println("date,time,millis,t_min,Tr,Tf,Ta,CO2_signal,CH4_signal,gas");
+  mySensorData.println("date,time,millis,t_h,Tr,Tf,Ta,CO2_signal,CH4_signal,gas");
   mySensorData.close();
 
   startMillisSD = millis();
@@ -324,13 +324,13 @@ void loop()
   if (currentMillisLCD - startMillisLCD >= periodLCD)
   { 
     // read sensors
-    t_min = float(millis()) / (60000);
+    t_h = float(millis()) / (3600000.0);
     //lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("    ");
     lcd.setCursor(0,0);
-    lcd.print(t_min, 0);
-    // Serial.println(t_min);
+    lcd.print(t_h, 2);
+    // Serial.println(t_h);
     // Serial.print("millis = ");
     // Serial.print(currentMillisSD);
     // Serial.print("   ");
@@ -363,11 +363,11 @@ void loop()
     lcd.setCursor(13,1);
     lcd.print("   ");
     lcd.setCursor(13,1);
-    lcd.print(round(1.0302*CO2_signal-46.57));
+    lcd.print(round((CO2_signal+19.99)/0.8978));
     lcd.setCursor(13,0);
     lcd.print("    ");
     lcd.setCursor(13,0);
-    lcd.print(round(1.0974*CH4_signal));
+    lcd.print(round((CH4_signal-70.5)/0.6420));
 
     Ta = readCelsius(pin_Ta);
     // Serial.print("Ta = ");
@@ -402,10 +402,10 @@ void loop()
     gas_sensorValue = analogRead(A1); // MQ2_sensor
     //    // Serial.print(gas_sensorValue);
     //    // Serial.print(" ");
-    lcd.setCursor(5, 0);
-    lcd.print("    ");
-    lcd.setCursor(5, 0);
-    lcd.print(gas_sensorValue);
+//    lcd.setCursor(5, 0);
+//    lcd.print("    ");
+//    lcd.setCursor(5, 0);
+//    lcd.print(gas_sensorValue);
     // Serial.print("gas = ");
     // Serial.println(gas_sensorValue);
     delay(5);        // delay in between reads for stability
@@ -436,7 +436,7 @@ void loop()
       mySensorData.print(currentMillisSD);
       mySensorData.print(",");
 
-      mySensorData.print(t_min);
+      mySensorData.print(t_h);
       mySensorData.print(",");
 
       mySensorData.print(Tr);
